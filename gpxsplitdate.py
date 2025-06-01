@@ -24,6 +24,17 @@ def parse_timedelta(time_str):
     hours, minutes = map(int, time_str[1:].split(':'))
     return timedelta(hours=hours * sign, minutes=minutes * sign)
     
+def count_substring_in_file(filename:str, substring:str):
+    try:
+        with open(filename, "r") as file:
+            content = file.read()
+            count = content.count(substring)
+            return count
+            
+    except FileNotFoundError:
+        return -1  # Or handle the error as needed
+    return 0
+    
 def split_gpx_by_dates(filename:str,resultdir:str,unique_dates:list, timezone_text:str=''):
 
     from pathlib import Path
@@ -37,15 +48,20 @@ def split_gpx_by_dates(filename:str,resultdir:str,unique_dates:list, timezone_te
         start_date_string = date_object.strftime("%Y%m%d%H%M%S")
         new_date = date_object + timedelta(days=1)  # Add one day
         end_date_string = new_date.strftime("%Y%m%d%H%M%S")  # Convert back to string
-        cmd = f'''gpsbabel -i gpx -f {filename} -o gpx  -x "track,start={start_date_string},stop={end_date_string},title="%Y%m%d""  -F {resultdir}/{date_string[:10]}.gpx '''
+        track_filename=f'{resultdir}/{date_string[:10]}.gpx'
+        cmd = f'''gpsbabel -i gpx -f {filename} -o gpx  -x "track,start={start_date_string},stop={end_date_string},title="%Y%m%d""  -F {track_filename} '''
         
         print(cmd)
         os.system(cmd)
         
+        # check if result gpx has any trkpoints
+        if (count_substring_in_file(track_filename,'trkpt') > 1) == False:
+            os.remove(track_filename)
+        
         #gpsbabel -i gpx -f merge.gpx -o gpx -x track,start=202505090000,stop=20250510000000 -F 2025-05-09.gpx
         
         '''
-        gpsbabel -t -i gpx -f  example/merge.gpx -x track,pack,split,title="ACTIVE LOG # %Y%m%d" -o gpx -F "dev_%Y%m%d.gpx"
+        gpsbabel -i gpx -f split/2025-05-17.gpx -o unicsv   -F split/2025-05-17.txt
         '''
 
 def parse_arguments():
